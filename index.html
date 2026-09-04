@@ -1,1120 +1,1168 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>İletken ve Yalıtkan Öğrenme Oyunu</title>
+    <title>Elektrik Macerası - 4. Sınıf IPT Oyunu</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            user-select: none;
-        }
-
         body {
-            background-color: #0f172a;
-            color: #fff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            overflow: hidden;
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 40%, #e0e7ff 100%);
+            color: #1e293b;
         }
-
-        #game-container {
-            position: relative;
-            width: 850px;
-            max-width: 100vw;
-            height: 620px;
-            max-height: 100vh;
-            background: linear-gradient(to bottom, #1e293b, #0f172a);
-            border-radius: 16px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.6);
-            overflow: hidden;
-            border: 3px solid #38bdf8;
+        .font-heading {
+            font-family: 'Fredoka', cursive, sans-serif;
         }
-
-        /* Üst Bilgi Paneli */
-        #ui-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            padding: 12px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            z-index: 10;
-            background: rgba(15, 23, 42, 0.75);
-            backdrop-filter: blur(8px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        @keyframes pulse-glow {
+            0%, 100% { filter: drop-shadow(0 0 15px rgba(245, 158, 11, 0.9)); transform: scale(1); }
+            50% { filter: drop-shadow(0 0 30px rgba(234, 179, 8, 1)); transform: scale(1.05); }
         }
-
-        .score-box {
-            font-size: 22px;
-            font-weight: 700;
-            color: #38bdf8;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+        .glow-bulb {
+            animation: pulse-glow 1.5s infinite alternate ease-in-out;
         }
-
-        .stage-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #f1f5f9;
-            background: rgba(56, 189, 248, 0.15);
-            padding: 6px 14px;
-            border-radius: 20px;
-            border: 1px solid rgba(56, 189, 248, 0.3);
+        @keyframes electron-flow {
+            0% { stroke-dashoffset: 40; }
+            100% { stroke-dashoffset: 0; }
         }
-
-        #info-toast {
-            position: absolute;
-            top: 65px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(15, 23, 42, 0.92);
-            border: 2px solid #38bdf8;
-            color: #fff;
-            padding: 10px 20px;
-            border-radius: 25px;
-            font-size: 15px;
-            font-weight: 600;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.3s ease, transform 0.3s ease;
-            z-index: 20;
-            text-align: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        .wire-active {
+            stroke-dasharray: 8 8;
+            animation: electron-flow 0.6s linear infinite;
         }
-
-        /* Canvas Alanı */
-        #canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
+        .crossword-input:focus {
+            background-color: #fef08a !important;
+            color: #0f172a !important;
+            outline: none;
         }
-
-        /* Dokunmatik Kontroller */
-        #touch-controls {
-            position: absolute;
-            bottom: 15px;
-            left: 0;
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            padding: 0 25px;
-            z-index: 15;
-            pointer-events: none;
+        ::-webkit-scrollbar {
+            width: 8px;
         }
-
-        .touch-btn {
-            pointer-events: auto;
-            width: 65px;
-            height: 65px;
-            background: rgba(56, 189, 248, 0.25);
-            border: 2px solid #38bdf8;
-            border-radius: 50%;
-            color: white;
-            font-size: 26px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            touch-action: manipulation;
-            backdrop-filter: blur(4px);
+        ::-webkit-scrollbar-track {
+            background: rgba(226, 232, 240, 0.8);
         }
-
-        .touch-btn:active {
-            background: rgba(56, 189, 248, 0.6);
-            transform: scale(0.95);
-        }
-
-        /* AŞAMA 2: TREN EŞLEŞTİRME SAHNESİ */
-        #train-stage {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(to bottom, #0f172a, #1e1b4b);
-            display: none;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
-            z-index: 18;
-            padding-top: 60px;
-            overflow: hidden;
-        }
-
-        #train-canvas {
-            width: 100%;
-            height: 380px;
-            display: block;
-            cursor: pointer;
-        }
-
-        .train-stations {
-            display: flex;
-            justify-content: space-around;
-            width: 100%;
-            padding: 15px 30px 25px 30px;
-            gap: 20px;
-            background: rgba(15, 23, 42, 0.9);
-            border-top: 2px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .station-box {
-            flex: 1;
-            height: 110px;
-            border-radius: 16px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 18px;
-            cursor: pointer;
-            transition: all 0.25s ease;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-            border: 2px dashed;
-            text-align: center;
-        }
-
-        .station-conductor {
-            background: rgba(16, 185, 129, 0.15);
-            border-color: #10b981;
-            color: #34d399;
-        }
-
-        .station-conductor:hover, .station-conductor.hover {
-            background: rgba(16, 185, 129, 0.35);
-            transform: translateY(-3px);
-            box-shadow: 0 12px 25px rgba(16, 185, 129, 0.3);
-        }
-
-        .station-insulator {
-            background: rgba(244, 63, 94, 0.15);
-            border-color: #f43f5e;
-            color: #fb7185;
-        }
-
-        .station-insulator:hover, .station-insulator.hover {
-            background: rgba(244, 63, 94, 0.35);
-            transform: translateY(-3px);
-            box-shadow: 0 12px 25px rgba(244, 63, 94, 0.3);
-        }
-
-        /* AŞAMA 3: DEVRE KURMA SAHNESİ */
-        #circuit-stage {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #0f172a;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: space-between;
-            padding: 70px 20px 20px 20px;
-            z-index: 18;
-        }
-
-        .circuit-board {
-            position: relative;
-            width: 620px;
-            height: 310px;
-            max-width: 95%;
-            background: #1e293b;
-            border: 3px solid #38bdf8;
-            border-radius: 18px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-
-        #circuit-svg {
-            width: 100%;
-            height: 100%;
-        }
-
-        .drop-zone {
-            position: absolute;
-            top: 215px;
-            left: 260px;
-            width: 100px;
-            height: 55px;
-            border: 3px dashed #f59e0b;
-            border-radius: 12px;
-            background: rgba(245, 158, 11, 0.15);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .drop-zone.hover {
-            background: rgba(56, 189, 248, 0.3);
-            border-color: #38bdf8;
-            transform: scale(1.05);
-        }
-
-        .items-inventory {
-            display: flex;
-            gap: 16px;
-            background: rgba(30, 41, 59, 0.8);
-            padding: 16px 24px;
-            border-radius: 16px;
-            width: 100%;
-            max-width: 620px;
-            justify-content: center;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .inventory-item {
-            width: 90px;
-            height: 90px;
-            background: #334155;
-            border: 2px solid #475569;
-            border-radius: 14px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            cursor: grab;
-            transition: all 0.2s;
-            text-align: center;
-            padding: 6px;
-        }
-
-        .inventory-item:hover {
-            transform: translateY(-6px);
-            border-color: #38bdf8;
-            background: #475569;
-        }
-
-        .inventory-item .icon {
-            font-size: 34px;
-            margin-bottom: 4px;
-        }
-
-        .inventory-item .label {
-            font-size: 12px;
-            font-weight: 600;
-            color: #f1f5f9;
-        }
-
-        /* Modal & Ekran Kaplamaları */
-        .overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(15, 23, 42, 0.92);
-            backdrop-filter: blur(10px);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 30;
-            text-align: center;
-            padding: 30px;
-        }
-
-        .btn {
-            background: linear-gradient(135deg, #0284c7, #38bdf8);
-            color: white;
-            border: none;
-            padding: 14px 36px;
-            font-size: 20px;
-            font-weight: 700;
-            border-radius: 30px;
-            cursor: pointer;
-            margin-top: 24px;
-            transition: all 0.25s;
-            box-shadow: 0 6px 20px rgba(56, 189, 248, 0.4);
-        }
-
-        .btn:hover {
-            transform: scale(1.06);
-            box-shadow: 0 8px 25px rgba(56, 189, 248, 0.6);
-        }
-
-        .instructions {
-            max-width: 540px;
-            margin: 20px 0;
-            line-height: 1.7;
-            font-size: 17px;
-            color: #cbd5e1;
-        }
-
-        .instructions span {
-            color: #34d399;
-            font-weight: 700;
-        }
-
-        .instructions .bad {
-            color: #fb7185;
-            font-weight: 700;
-        }
-
-        .hidden {
-            display: none !important;
+        ::-webkit-scrollbar-thumb {
+            background: #0284c7;
+            border-radius: 4px;
         }
     </style>
 </head>
-<body>
+<body class="h-full flex flex-col justify-between overflow-x-hidden selection:bg-amber-400 selection:text-slate-900">
 
-    <div id="game-container">
-        <!-- Üst Bar -->
-        <div id="ui-layer">
-            <div class="score-box" id="score-display">⭐ Puan: <span id="score">0</span> / 20</div>
-            <div class="stage-title" id="stage-title">1. Aşama: Robot İle Toplama</div>
-        </div>
-
-        <!-- Bilgi Balonu -->
-        <div id="info-toast"></div>
-
-        <!-- Aşama 1 Canvas -->
-        <canvas id="canvas"></canvas>
-
-        <!-- Dokunmatik Tuşlar -->
-        <div id="touch-controls">
-            <div class="touch-btn" id="btn-left">◄</div>
-            <div class="touch-btn" id="btn-right">►</div>
-        </div>
-
-        <!-- Başlangıç Ekranı -->
-        <div id="start-overlay" class="overlay">
-            <h1 style="color: #38bdf8; font-size: 38px; margin-bottom: 10px;">🤖 İletken & Yalıtkan Robotu</h1>
-            <p class="instructions">
-                Yukarıdan yavaşça düşen maddeleri incele!<br><br>
-                ⚡ <span>İLETKEN</span> maddeleri robotunla topla (<b>+1 Puan</b>)<br>
-                🛡️ <span class="bad">YALITKAN</span> maddelerden kaçın (<b>-1 Puan</b>)<br><br>
-                <b>20 Puan</b> toplayıp Hareketli Tren Aşamasına geç!
-            </p>
-            <p style="font-size: 14px; color: #94a3b8;">Kontroller: Klavyedeki Sağ / Sol Ok Tuşları veya Ekran Butonları</p>
-            <button class="btn" id="start-btn">Oyuna Başla 🚀</button>
-        </div>
-
-        <!-- Aşama 1 Tamamlandı Modal -->
-        <div id="stage1-clear-overlay" class="overlay hidden">
-            <h1 style="color: #34d399; font-size: 36px;">Harika İş! 1. Aşama Tamamlandı! 🎉</h1>
-            <p class="instructions">
-                20 puana ulaştın ve iletken maddeleri başarıyla topladın.<br>
-                Şimdi <b>2. Aşama: Tren Eşleştirme Oyunu</b> başlıyor!
-            </p>
-            <button class="btn" id="to-stage2-btn">2. Aşamaya Geç 🚂</button>
-        </div>
-
-        <!-- AŞAMA 2: TREN EŞLEŞTİRME OYUNU -->
-        <div id="train-stage">
-            <canvas id="train-canvas"></canvas>
-
-            <div class="train-stations">
-                <div class="station-box station-conductor" id="station-conductor">
-                    <span style="font-size: 28px;">⚡</span>
-                    <span>İLETKEN İSTASYONU</span>
-                    <span style="font-size: 12px; opacity: 0.8; margin-top: 4px;">(Elektriği İletir)</span>
+<div id="app" class="min-h-screen flex flex-col">
+    <!-- TOP NAVIGATION & HEADER -->
+    <header class="bg-white/90 backdrop-blur-md border-b border-sky-200 sticky top-0 z-50 px-4 py-3 shadow-sm">
+        <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-4">
+            <!-- Game Title & Mascot logo -->
+            <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-400 to-yellow-300 flex items-center justify-center text-slate-900 text-2xl font-black shadow-md shadow-amber-500/20">
+                    <i class="fa-solid fa-bolt animate-bounce text-amber-900"></i>
                 </div>
-                <div class="station-box station-insulator" id="station-insulator">
-                    <span style="font-size: 28px;">🛡️</span>
-                    <span>YALITKAN İSTASYONU</span>
-                    <span style="font-size: 12px; opacity: 0.8; margin-top: 4px;">(Elektriği İletmez)</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Aşama 2 Tamamlandı Modal -->
-        <div id="stage2-clear-overlay" class="overlay hidden">
-            <h1 style="color: #34d399; font-size: 36px;">Mükemmel Eşleştirme! 🚂✨</h1>
-            <p class="instructions">
-                Tren vagonlarındaki tüm maddeleri doğru istasyonlara yerleştirdin.<br>
-                Son görev: <b>Elektrik Devresini Tamamlayıp Ampulü Yakmak!</b>
-            </p>
-            <button class="btn" id="to-stage3-btn">3. Aşamaya Geç 💡</button>
-        </div>
-
-        <!-- AŞAMA 3: DEVRE TAMAMLAMA OYUNU -->
-        <div id="circuit-stage">
-            <div style="text-align: center; margin-bottom: 10px;">
-                <h2 style="color: #f59e0b; font-size: 24px;">Devreyi Tamamla ve Ampulü Yak!</h2>
-                <p style="color: #94a3b8; font-size: 14px; margin-top: 4px;">Aşağıdaki maddelerden iletken olanı seçip devredeki boşluğa yerleştirin.</p>
-            </div>
-
-            <div class="circuit-board">
-                <svg id="circuit-svg" viewBox="0 0 620 310">
-                    <!-- Bağlantı Kabloları -->
-                    <path d="M 110 155 L 110 240 L 260 240" fill="none" stroke="#f59e0b" stroke-width="8" stroke-linecap="round"/>
-                    <path d="M 360 240 L 510 240 L 510 155" fill="none" stroke="#f59e0b" stroke-width="8" stroke-linecap="round"/>
-                    <path d="M 510 155 L 510 75 L 340 75" fill="none" stroke="#f59e0b" stroke-width="8" stroke-linecap="round"/>
-                    <path d="M 280 75 L 110 75 L 110 155" fill="none" stroke="#f59e0b" stroke-width="8" stroke-linecap="round"/>
-
-                    <!-- Pil -->
-                    <g transform="translate(85, 125)">
-                        <rect x="0" y="0" width="50" height="65" fill="#1e293b" stroke="#64748b" stroke-width="2" rx="6"/>
-                        <rect x="16" y="-8" width="18" height="8" fill="#94a3b8" rx="2"/>
-                        <rect x="6" y="12" width="38" height="22" fill="#ef4444" rx="3"/>
-                        <text x="25" y="28" fill="white" font-size="16" font-weight="bold" text-anchor="middle">+</text>
-                        <text x="25" y="54" fill="white" font-size="16" font-weight="bold" text-anchor="middle">-</text>
-                    </g>
-
-                    <!-- Ampul -->
-                    <g transform="translate(290, 40)">
-                        <rect x="0" y="42" width="40" height="22" fill="#64748b" rx="4"/>
-                        <circle id="bulb-glass" cx="20" cy="24" r="26" fill="rgba(255, 255, 255, 0.15)" stroke="#e2e8f0" stroke-width="2"/>
-                        <path d="M 10 42 L 17 24 L 23 24 L 30 42" fill="none" stroke="#94a3b8" stroke-width="2"/>
-                        <circle id="bulb-glow" cx="20" cy="24" r="50" fill="rgba(245, 158, 11, 0.5)" opacity="0" style="transition: opacity 0.5s ease;"/>
-                    </g>
-
-                    <!-- Bağlantı Terminalleri -->
-                    <circle cx="260" cy="240" r="9" fill="#ef4444"/>
-                    <circle cx="360" cy="240" r="9" fill="#ef4444"/>
-                </svg>
-
-                <div class="drop-zone" id="drop-zone">
-                    <span style="font-size: 11px; color: #cbd5e1; text-align: center;">Maddeyi Buraya Koy</span>
+                <div>
+                    <h1 class="font-heading text-xl md:text-2xl font-bold text-amber-600">
+                        Elektrik Macerası
+                    </h1>
+                    <p class="text-xs text-sky-800 font-bold">4. Sınıf IPT Oyunu</p>
                 </div>
             </div>
 
-            <div class="items-inventory" id="inventory"></div>
+            <!-- Level Navigation Tabs -->
+            <nav class="flex flex-wrap items-center gap-1 md:gap-2 bg-sky-50 p-1.5 rounded-2xl border border-sky-200">
+                <button onclick="switchTab('tab-lab')" id="btn-tab-lab" class="px-3 py-1.5 md:px-3.5 md:py-2 rounded-xl font-heading text-xs md:text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow">
+                    <i class="fa-solid fa-vial-circle-check"></i>
+                    <span>1. İletken/Yalıtkan</span>
+                </button>
+
+                <button onclick="switchTab('tab-house')" id="btn-tab-house" disabled class="px-3 py-1.5 md:px-3.5 md:py-2 rounded-xl font-heading text-xs md:text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 text-slate-400 bg-slate-200/50 cursor-not-allowed opacity-60">
+                    <i id="lock-icon-house" class="fa-solid fa-lock text-xs"></i>
+                    <span>2. Karanlık Ev</span>
+                </button>
+
+                <button onclick="switchTab('tab-crossword')" id="btn-tab-crossword" disabled class="px-3 py-1.5 md:px-3.5 md:py-2 rounded-xl font-heading text-xs md:text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 text-slate-400 bg-slate-200/50 cursor-not-allowed opacity-60">
+                    <i id="lock-icon-crossword" class="fa-solid fa-lock text-xs"></i>
+                    <span>3. Çengel Bulmaca</span>
+                </button>
+            </nav>
+
+            <!-- Score & Sound Control -->
+            <div class="flex items-center gap-3">
+                <div class="bg-amber-100 border border-amber-300 px-3 py-1.5 rounded-xl flex items-center gap-2 text-amber-900 font-heading font-bold text-sm shadow-sm">
+                    <i class="fa-solid fa-star text-amber-500 text-base"></i>
+                    <span>Puan: <span id="user-score" class="text-amber-950 text-base">0</span></span>
+                </div>
+                <button onclick="toggleAudio()" id="sound-toggle" title="Sesi Aç/Kapat" class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-amber-600 hover:bg-slate-100 transition shadow-sm">
+                    <i id="sound-icon" class="fa-solid fa-volume-high"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT CONTAINER -->
+    <main class="flex-grow max-w-6xl w-full mx-auto p-4 md:p-6 flex flex-col justify-center">
+
+        <section id="tab-lab" class="block space-y-6">
+            <div class="bg-white/90 border border-emerald-200 rounded-3xl p-5 md:p-6 shadow-xl relative overflow-hidden backdrop-blur">
+                <div class="flex items-start gap-4">
+                    <div class="w-14 h-14 rounded-2xl bg-emerald-100 border border-emerald-300 flex items-center justify-center text-emerald-600 text-3xl shrink-0">
+                        <i class="fa-solid fa-vial-circle-check"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-heading text-2xl font-bold text-emerald-700 mb-1">1. Bölüm: İletken ve Yalıtkan Maddeler</h2>
+                        <p class="text-slate-600 text-sm md:text-base">
+                            Elektriği kolayca ileten maddelere <strong class="text-emerald-700">İletken</strong>, geçirmeyen maddelere <strong class="text-rose-600">Yalıtkan</strong> denir. 
+                            2. Bölümdeki (Karanlık Ev) devreyi tamir edebilmek için buradaki 3 soruyu tamamlamalısın!
+                        </p>
+                    </div>
+                </div>
+
+                <div class="mt-4 bg-slate-100 rounded-full h-3 w-full border border-slate-200 overflow-hidden">
+                    <div id="p2-progress-bar" class="bg-emerald-500 h-full w-0 transition-all duration-300"></div>
+                </div>
+                <div class="flex justify-between items-center text-xs text-slate-500 mt-1">
+                    <span>Tamamlanan Soru: <b id="p2-counter" class="text-emerald-600">0 / 3</b></span>
+                    <span id="p2-status" class="text-emerald-700 font-bold">Soruları Sırayla Cevapla!</span>
+                </div>
+            </div>
+
+            <!-- Quiz Cards Box for Section 1 -->
+            <div id="p2-questions-container" class="grid grid-cols-1 gap-6">
+                <!-- Question 1 -->
+                <div id="p2-q1" class="bg-white border-2 border-slate-200 rounded-3xl p-6 shadow-lg space-y-4">
+                    <div class="flex items-center gap-3">
+                        <span class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300 flex items-center justify-center font-bold text-sm">1</span>
+                        <h3 class="font-heading text-base md:text-lg text-emerald-800 font-bold">İletken Maddeleri Bul ve Seç</h3>
+                    </div>
+                    <p class="text-sm text-slate-700">
+                        Aşağıdaki nesnelerin üzerine tek tek tıkla! <strong class="text-emerald-700">3 adet İLETKEN nesneyi</strong> bulmalısın. (Doğru iletkenler <span class="text-emerald-600 font-bold">YEŞİL</span>, yalıtkanlar <span class="text-rose-600 font-bold">KIRMIZI</span> yanar).
+                    </p>
+                    <div id="p2-q1-items" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <button onclick="selectItemQ1(this, true)" class="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl flex flex-col items-center gap-2 text-xs md:text-sm transition text-slate-800">
+                            <i class="fa-solid fa-key text-amber-600 text-2xl"></i>
+                            <span class="font-bold">Bakır Anahtar</span>
+                        </button>
+                        <button onclick="selectItemQ1(this, false)" class="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl flex flex-col items-center gap-2 text-xs md:text-sm transition text-slate-800">
+                            <i class="fa-solid fa-ruler text-blue-500 text-2xl"></i>
+                            <span class="font-bold">Plastik Cetvel</span>
+                        </button>
+                        <button onclick="selectItemQ1(this, true)" class="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl flex flex-col items-center gap-2 text-xs md:text-sm transition text-slate-800">
+                            <i class="fa-solid fa-wrench text-slate-500 text-2xl"></i>
+                            <span class="font-bold">Demir Çivi</span>
+                        </button>
+                        <button onclick="selectItemQ1(this, false)" class="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl flex flex-col items-center gap-2 text-xs md:text-sm transition text-slate-800">
+                            <i class="fa-solid fa-utensils text-amber-800 text-2xl"></i>
+                            <span class="font-bold">Tahta Kaşık</span>
+                        </button>
+                        <button onclick="selectItemQ1(this, true)" class="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl flex flex-col items-center gap-2 text-xs md:text-sm transition text-slate-800">
+                            <i class="fa-solid fa-scroll text-slate-400 text-2xl"></i>
+                            <span class="font-bold">Alüminyum Folyo</span>
+                        </button>
+                        <button onclick="selectItemQ1(this, false)" class="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl flex flex-col items-center gap-2 text-xs md:text-sm transition text-slate-800">
+                            <i class="fa-solid fa-circle text-cyan-500 text-2xl"></i>
+                            <span class="font-bold">Cam Bilye</span>
+                        </button>
+                    </div>
+                    <div id="p2-q1-feedback" class="text-xs font-bold text-slate-500 min-h-[1.25rem]"></div>
+                </div>
+
+                <!-- Question 2 -->
+                <div id="p2-q2" class="bg-white border-2 border-slate-200 rounded-3xl p-6 shadow-lg space-y-4 opacity-50 pointer-events-none">
+                    <div class="flex items-center gap-3">
+                        <span class="w-8 h-8 rounded-full bg-amber-100 text-amber-700 border border-amber-300 flex items-center justify-center font-bold text-sm">2</span>
+                        <h3 class="font-heading text-base md:text-lg text-amber-800 font-bold">Şaşırtıcı Özel İletken (Grafit)</h3>
+                    </div>
+                    <p class="text-sm text-slate-700">
+                        Kurşun kalemimizin ucu (Grafit), metal olmamasına rağmen elektrik akımını iletir mi?
+                    </p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <button onclick="answerLabQ(2, true, this)" class="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl text-xs md:text-sm text-left transition text-slate-800">A) Evet! Kalem ucu (grafit) İLETKEN bir maddedir.</button>
+                        <button onclick="answerLabQ(2, false, this)" class="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl text-xs md:text-sm text-left transition text-slate-800">B) Hayır! Kalem ucu elektriği kesinlikle iletmez.</button>
+                    </div>
+                </div>
+
+                <!-- Question 3 -->
+                <div id="p2-q3" class="bg-white border-2 border-slate-200 rounded-3xl p-6 shadow-lg space-y-4 opacity-50 pointer-events-none">
+                    <div class="flex items-center gap-3">
+                        <span class="w-8 h-8 rounded-full bg-purple-100 text-purple-700 border border-purple-300 flex items-center justify-center font-bold text-sm">3</span>
+                        <h3 class="font-heading text-base md:text-lg text-purple-800 font-bold">Yalıtkan Maddelerin Önemi</h3>
+                    </div>
+                    <p class="text-sm text-slate-700">
+                        Elektrik kablolarının dışı neden yumuşak plastik ile kaplanır?
+                    </p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <button onclick="answerLabQ(3, false, this)" class="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl text-xs md:text-sm text-left transition text-slate-800">A) Kablonun daha hızlı elektrik iletmesini sağlamak için</button>
+                        <button onclick="answerLabQ(3, true, this)" class="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl text-xs md:text-sm text-left transition text-slate-800">B) Plastik yalıtkan olduğu için bizi elektrik çarpmasından korumak amacıyla</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Next Level Button Container -->
+            <div id="p2-next-btn-container" class="hidden text-center pt-2">
+                <button onclick="unlockAndSwitchTab('tab-house')" class="px-8 py-4 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-slate-950 font-heading font-black text-lg rounded-2xl shadow-xl shadow-amber-500/20 animate-pulse transition">
+                    Harika! 2. Bölüme Geç (Karanlık Ev Onarımı) <i class="fa-solid fa-house-chimney-crack ml-2"></i>
+                </button>
+            </div>
+        </section>
+
+        <section id="tab-house" class="hidden space-y-6">
+            <div class="bg-gradient-to-r from-purple-100 via-sky-50 to-indigo-100 border border-purple-200 rounded-3xl p-5 shadow-xl flex flex-col md:flex-row items-center gap-4">
+                <div class="w-16 h-16 rounded-2xl bg-amber-400/30 border border-amber-400 flex items-center justify-center text-amber-700 text-3xl shrink-0">
+                    <i class="fa-solid fa-user-ninja"></i>
+                </div>
+                <div class="flex-1 text-center md:text-left">
+                    <h2 class="font-heading text-xl md:text-2xl font-bold text-purple-900">2. BÖLÜM GÖREVİ: Odaları Sırayla Onar ve Evi Aydınlat!</h2>
+                    <p class="text-slate-700 text-xs md:text-sm">
+                        Odalardaki devrelerde kopukluk var. <strong class="text-amber-700">1. Odadan başlayarak sırayla</strong> odaları onar. 
+                        Doğru bir İLETKEN malzeme kullandığında o malzeme <strong class="text-rose-600 font-bold">çantandan silinir!</strong>
+                    </p>
+                </div>
+                <div class="bg-white/90 px-4 py-2 rounded-2xl border border-purple-300 text-center shrink-0 shadow-sm">
+                    <span class="text-xs text-purple-800 font-bold block">Tamamlanan Odalar</span>
+                    <span id="fixed-rooms-count" class="font-heading text-2xl font-black text-amber-600">0 / 4</span>
+                </div>
+            </div>
+
+            <!-- House Rooms Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <!-- ROOM 1: SALON -->
+                <div id="room-card-1" class="room-card bg-white border-2 border-amber-400 rounded-3xl p-5 shadow-lg transition-all duration-300 relative">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center text-xl border border-slate-200">
+                                <i class="fa-solid fa-tv"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-heading font-bold text-base text-slate-800">1. Salon (TV ve Avize)</h3>
+                                <p id="room-status-1" class="text-[11px] text-amber-600 font-bold">Şu anki aktif görev!</p>
+                            </div>
+                        </div>
+                        <span id="room-badge-1" class="px-3 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300">1. Onarılacak Oda</span>
+                    </div>
+
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div id="room-bulb-1" class="w-10 h-10 rounded-full bg-slate-200 text-slate-400 flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-lightbulb"></i>
+                            </div>
+                            <span class="text-xs text-slate-600">Ampul: <b id="room-bulb-txt-1" class="text-rose-600">Karanlık</b></span>
+                        </div>
+                        <button id="room-btn-1" onclick="openRoomRepairModal(1)" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-heading font-bold text-xs transition flex items-center gap-2 shadow">
+                            <i class="fa-solid fa-wrench"></i>
+                            <span>1. Devreyi Onar</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ROOM 2: MUTFAK -->
+                <div id="room-card-2" class="room-card bg-white border-2 border-slate-200 rounded-3xl p-5 shadow-lg transition-all duration-300 relative opacity-50">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-utensils"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-heading font-bold text-base text-slate-700">2. Mutfak (Buzdolabı & Işık)</h3>
+                                <p id="room-status-2" class="text-[11px] text-slate-400">1. Oda bittikten sonra açılır.</p>
+                            </div>
+                        </div>
+                        <span id="room-badge-2" class="px-3 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-500 border border-slate-300"><i class="fa-solid fa-lock"></i> Kilitli</span>
+                    </div>
+
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div id="room-bulb-2" class="w-10 h-10 rounded-full bg-slate-200 text-slate-400 flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-lightbulb"></i>
+                            </div>
+                            <span class="text-xs text-slate-500">Ampul: <b id="room-bulb-txt-2" class="text-slate-400">Bekliyor</b></span>
+                        </div>
+                        <button id="room-btn-2" disabled onclick="openRoomRepairModal(2)" class="px-4 py-2 rounded-xl bg-slate-200 text-slate-500 font-heading font-bold text-xs cursor-not-allowed flex items-center gap-2">
+                            <i class="fa-solid fa-lock"></i>
+                            <span>Kilitli</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ROOM 3: ÇALIŞMA ODASI -->
+                <div id="room-card-3" class="room-card bg-white border-2 border-slate-200 rounded-3xl p-5 shadow-lg transition-all duration-300 relative opacity-50">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-laptop"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-heading font-bold text-base text-slate-700">3. Çalışma Odası (Masa Lambası)</h3>
+                                <p id="room-status-3" class="text-[11px] text-slate-400">2. Oda bittikten sonra açılır.</p>
+                            </div>
+                        </div>
+                        <span id="room-badge-3" class="px-3 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-500 border border-slate-300"><i class="fa-solid fa-lock"></i> Kilitli</span>
+                    </div>
+
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div id="room-bulb-3" class="w-10 h-10 rounded-full bg-slate-200 text-slate-400 flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-lightbulb"></i>
+                            </div>
+                            <span class="text-xs text-slate-500">Ampul: <b id="room-bulb-txt-3" class="text-slate-400">Bekliyor</b></span>
+                        </div>
+                        <button id="room-btn-3" disabled onclick="openRoomRepairModal(3)" class="px-4 py-2 rounded-xl bg-slate-200 text-slate-500 font-heading font-bold text-xs cursor-not-allowed flex items-center gap-2">
+                            <i class="fa-solid fa-lock"></i>
+                            <span>Kilitli</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ROOM 4: YATAK ODASI -->
+                <div id="room-card-4" class="room-card bg-white border-2 border-slate-200 rounded-3xl p-5 shadow-lg transition-all duration-300 relative opacity-50">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-bed"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-heading font-bold text-base text-slate-700">4. Yatak Odası (Gece Lambası)</h3>
+                                <p id="room-status-4" class="text-[11px] text-slate-400">3. Oda bittikten sonra açılır.</p>
+                            </div>
+                        </div>
+                        <span id="room-badge-4" class="px-3 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-500 border border-slate-300"><i class="fa-solid fa-lock"></i> Kilitli</span>
+                    </div>
+
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div id="room-bulb-4" class="w-10 h-10 rounded-full bg-slate-200 text-slate-400 flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-lightbulb"></i>
+                            </div>
+                            <span class="text-xs text-slate-500">Ampul: <b id="room-bulb-txt-4" class="text-slate-400">Bekliyor</b></span>
+                        </div>
+                        <button id="room-btn-4" disabled onclick="openRoomRepairModal(4)" class="px-4 py-2 rounded-xl bg-slate-200 text-slate-500 font-heading font-bold text-xs cursor-not-allowed flex items-center gap-2">
+                            <i class="fa-solid fa-lock"></i>
+                            <span>Kilitli</span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Next Level Button to Crossword -->
+            <div id="p3-next-btn-container" class="hidden text-center pt-4">
+                <button onclick="unlockAndSwitchTab('tab-crossword')" class="px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-heading font-black text-lg rounded-2xl shadow-xl shadow-purple-500/30 animate-pulse transition">
+                    Tebrikler! Ev Aydınlandı! Son Aşama: 3. Bölüm (Çengel Bulmaca) <i class="fa-solid fa-puzzle-piece ml-2"></i>
+                </button>
+            </div>
+        </section>
+
+        <section id="tab-crossword" class="hidden space-y-6">
+            <div class="bg-white/90 border border-purple-200 rounded-3xl p-5 md:p-6 shadow-xl relative overflow-hidden backdrop-blur">
+                <div class="flex items-start gap-4">
+                    <div class="w-14 h-14 rounded-2xl bg-purple-100 border border-purple-300 flex items-center justify-center text-purple-600 text-3xl shrink-0">
+                        <i class="fa-solid fa-puzzle-piece"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-heading text-2xl font-bold text-purple-800 mb-1">3. Bölüm: Elektrik Çengel Bulmacası</h2>
+                        <p class="text-slate-600 text-sm md:text-base">
+                            Öğrendiğin fen terimleriyle aşağıdaki bulmacayı doldur! Tüm kelimeleri doğru yazdığında oyunu tam puanla bitireceksin!
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Crossword Layout & Clues -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Clues Column -->
+                <div class="bg-white border border-slate-200 rounded-3xl p-5 space-y-4 shadow-lg">
+                    <h3 class="font-heading font-bold text-lg text-amber-700 flex items-center gap-2">
+                        <i class="fa-solid fa-list-check"></i>
+                        <span>Bulmaca İpuçları</span>
+                    </h3>
+
+                    <div class="space-y-3 text-xs md:text-sm">
+                        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                            <span class="font-bold text-cyan-700 block mb-1">1. (7 Harfli Kelime)</span>
+                            <p class="text-slate-700">Elektrik akımını kolayca geçiren maddelere ne ad verilir?</p>
+                        </div>
+
+                        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                            <span class="font-bold text-rose-700 block mb-1">2. (8 Harfli Kelime)</span>
+                            <p class="text-slate-700">Elektrik akımının geçişini engelleyen maddelere ne denir?</p>
+                        </div>
+
+                        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                            <span class="font-bold text-amber-700 block mb-1">3. (5 Harfli Kelime)</span>
+                            <p class="text-slate-700">Elektrik devresinde elektrik enerjisini ışığa dönüştüren eleman.</p>
+                        </div>
+
+                        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                            <span class="font-bold text-emerald-700 block mb-1">4. (3 Harfli Kelime)</span>
+                            <p class="text-slate-700">Basit elektrik devresinin taşınabilir güç kaynağı.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Interactive Grid Column -->
+                <div class="lg:col-span-2 bg-white border border-slate-200 rounded-3xl p-6 flex flex-col items-center justify-center shadow-lg">
+                    <div class="space-y-4 w-full max-w-md">
+                        
+                        <!-- Word 1 -->
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-xs font-bold text-cyan-700">1. Soru</span>
+                                <button onclick="promptWordInput(1)" class="text-[11px] text-cyan-800 hover:text-cyan-900 bg-cyan-100 border border-cyan-300 px-2.5 py-1 rounded-lg transition flex items-center gap-1.5 font-semibold">
+                                    <i class="fa-solid fa-pen-to-square"></i> Kelimeyi Direkt Yaz
+                                </button>
+                            </div>
+                            <div class="flex gap-1.5 justify-center" id="cw-word-1">
+                                <input type="text" maxlength="1" class="w-10 h-10 md:w-11 md:h-11 text-center font-heading font-black text-lg bg-slate-50 border-2 border-slate-300 rounded-xl text-slate-800 uppercase crossword-input">
+                                <input type="text" maxlength="1" class="w-10 h-10 md:w-11 md:h-11 text-center font-heading font-black text-lg bg-slate-50 border-2 border-slate-300 rounded-xl text-slate-800 uppercase crossword-input">
+                                <input type="text" maxlength="1" class="w-10 h-10 md:w-11 md:h-11 text-center font-heading font-black text-lg bg-slate-50 border-2 border-slate-300 rounded-xl text-slate-800 uppercase crossword-input">
+                                <input type="text" maxlength="1" class="w-10 h-10 md:w-11 md:h-11 text-center font-heading font-black text-lg bg-slate-50 border-2 border-slate-300 rounded-xl text-slate-800 uppercase crossword-input">
+                                <input type="text" maxlength="1" class="w-10 h-10 md:w-11 md:h-11 text-center font-heading font-black text-lg bg-slate-50 border-2 border-slate-300 rounded-xl text-slate-800 uppercase crossword-input">
+                                <input type="text" maxlength="1" class="w-10 h-10 md:w-11 md:h-11 text-center font-heading font-black text-lg bg-slate-50 border-2 border-slate-300 rounded-xl text-slate-800 uppercase crossword-input">
+                                <input type="text" maxlength="1" class="w-10 h-10 md:w-11 md:h-11 text-center font-heading font-black text-lg bg-slate-50 border-2 border-slate-300 rounded-xl text-slate-800 uppercase crossword-input">
+                            </div>
+                        </div>
+
+                        <!-- Word 2 -->
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-xs font-bold text-rose-700">2. Soru</span>
+                                <button onclick="promptWordInput(2)" class="text-[11px] text-rose-800 hover:text-rose-900 bg-rose-100 border border-rose-300 px-2.5 py-1 rounded-lg transition flex items-center gap-1.5 font-semibold">
+                                    <i class="fa-solid fa-pen-to-square"></i> Kelimeyi Direkt Yaz
+                                </button>
+                            </div>
+                            <div class="flex gap-1.5 justify-center" id="cw-word-2">
+                                <input type="text" maxlength="1" class="w-9 h-9 md:w-10 md:h-10 text-center font-heading font-black text-lg bg-slate-50 border-2 border-slate-300 rounded-xl text-slate-800 uppercase crossword-input">
+                                <input type="text" maxlength="1" class="w-9 h-9 md:w-10 md:h-10 text-center font-heading font-black text-lg bg-slate-50 border-2 border-slate-300 rounded-xl text-slate-800 uppercase crossword-input">
+                                <input type="text" maxlength="1" class="w-9 h-9 md:w-10 md:h-10 text-center font-heading font-black text-lg bg-slate-50 border-2 border-slate-300 rounded-xl text-slate-800 uppercase crossword-input">
+                                <input type="text" maxlength="1" class="w-9 h-9 md:w-10 md:h-10 text-center font-heading font-black text-lg bg-slate-50 border-2 border-slate-300 rounded-xl text-slate-800 uppercase crossword-input">
+                                <input type="text" maxlength="1" class="w-9 h-9 md:w-10 md:h-10 text-center font-heading font-black text-lg bg-slate-50 border-2 border-slate-300 rounded-xl text-slate-800 uppercase crossword-input">
+                                <input type="text" maxlength="1" class="w-9 h-9 md:w-10 md:h-10 text-center font-heading font-black text-lg bg-slate-50 border-2 border-slate-300 rounded-xl text-slate-800 uppercase crossword-input">
+                                <input type="text" maxlength="1" class="w-9 h-9 md:w-10 md:h-10 text-center font-heading font-black text-lg bg-slate-50 border-2 border-slate-300 rounded-xl text-slate-800 uppercase crossword-input">
+                                <input type="text" maxlength="1" class="w-9 h-9 md:w-10 md:h-10 text-center font-heading font-black text-lg bg-slate-50 border-2 border-slate-300 rounded-xl text-slate-800 uppercase crossword-input">
+                            </div>
+                        </div>
+
+                        <!-- Word 3 -->
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-xs font-bold text-amber-700">3. Soru</span>
+                                <button onclick="promptWordInput(3)" class="text-[11px] text-amber-800 hover:text-amber-900 bg-amber-100 border border-amber-300 px-2.5 py-1 rounded-lg transition flex items-center gap-1.5 font-semibold">
+                                    <i class="fa-solid fa-pen-to-square"></i> Kelimeyi Direkt Yaz
+                                </button>
+                            </div>
+                            <div class="flex gap-1.5 justify-center" id="cw-word-3">
+                                <input type="text" maxlength="1" class="w-10 h-10 md:w-11 md:h-11 text-center font-heading font-black text-lg bg-slate-50 border-2 border-slate-300 rounded-xl text-slate-800 uppercase crossword-input">
+                                <input type="text" maxlength="1" class="w-10 h-10 md:w-11 md:h-11 text-center font-heading font-black text-lg bg-slate-50 border-2 border-slate-300 rounded-xl text-slate-800 uppercase crossword-input">
+                                <input type="text" maxlength="1" class="w-10 h-10 md:w-11 md:h-11 text-center font-heading font-black text-lg bg-slate-50 border-2 border-slate-300 rounded-xl text-slate-800 uppercase crossword-input">
+                                <input type="text" maxlength="1" class="w-10 h-10 md:w-11 md:h-11 text-center font-heading font-black text-lg bg-slate-50 border-2 border-slate-300 rounded-xl text-slate-800 uppercase crossword-input">
+                                <input type="text" maxlength="1" class="w-10 h-10 md:w-11 md:h-11 text-center font-heading font-black text-lg bg-slate-50 border-2 border-slate-300 rounded-xl text-slate-800 uppercase crossword-input">
+                            </div>
+                        </div>
+
+                        <!-- Word 4 -->
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-xs font-bold text-emerald-700">4. Soru</span>
+                                <button onclick="promptWordInput(4)" class="text-[11px] text-emerald-800 hover:text-emerald-900 bg-emerald-100 border border-emerald-300 px-2.5 py-1 rounded-lg transition flex items-center gap-1.5 font-semibold">
+                                    <i class="fa-solid fa-pen-to-square"></i> Kelimeyi Direkt Yaz
+                                </button>
+                            </div>
+                            <div class="flex gap-1.5 justify-center" id="cw-word-4">
+                                <input type="text" maxlength="1" class="w-10 h-10 md:w-11 md:h-11 text-center font-heading font-black text-lg bg-slate-50 border-2 border-slate-300 rounded-xl text-slate-800 uppercase crossword-input">
+                                <input type="text" maxlength="1" class="w-10 h-10 md:w-11 md:h-11 text-center font-heading font-black text-lg bg-slate-50 border-2 border-slate-300 rounded-xl text-slate-800 uppercase crossword-input">
+                                <input type="text" maxlength="1" class="w-10 h-10 md:w-11 md:h-11 text-center font-heading font-black text-lg bg-slate-50 border-2 border-slate-300 rounded-xl text-slate-800 uppercase crossword-input">
+                            </div>
+                        </div>
+
+                        <!-- Verify Crossword Button -->
+                        <div class="pt-4 text-center">
+                            <button onclick="checkCrossword()" class="px-8 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-heading font-black text-base rounded-2xl shadow-lg transition">
+                                <i class="fa-solid fa-check-double mr-2"></i> Bulmacayı Kontrol Et
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-white border-t border-slate-200 py-4 px-4 text-center text-xs text-slate-500">
+        <p>4. Sınıf IPT Müfredatı - Elektrik Enerjisi, İletken/Yalıtkan Maddeler & Basit Elektrik Devreleri Oyunu</p>
+    </footer>
+</div>
+
+<div id="repair-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 hidden">
+    <div class="bg-white border-2 border-amber-400 rounded-3xl max-w-2xl w-full p-6 shadow-2xl relative overflow-hidden text-slate-800">
+        
+        <!-- Close Button -->
+        <button onclick="closeRepairModal()" class="absolute top-4 right-4 text-slate-500 hover:text-slate-900 text-xl w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <!-- Modal Header -->
+        <div class="flex items-center gap-3 mb-4">
+            <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center text-2xl border border-amber-300">
+                <i class="fa-solid fa-bolt"></i>
+            </div>
+            <div>
+                <h3 id="modal-room-title" class="font-heading text-xl font-bold text-amber-700">Oda Devresini Tamamla</h3>
+                <p class="text-xs text-slate-500">Çantandaki malzemelerden bir İLETKEN seçerek kopuk devreyi tamir et!</p>
+            </div>
         </div>
 
-        <!-- Oyunu Kazanma Modal -->
-        <div id="victory-overlay" class="overlay hidden">
-            <h1 style="color: #f59e0b; font-size: 38px; margin-bottom: 12px;">TEBRİKLER! OYUNU KAZANDIN! 🏆⚡</h1>
-            <p class="instructions">
-                İletken madde sayesinde elektrik devresi tamamlandı, akım geçti ve ampul yandı!<br><br>
-                <b>Öğrendiklerimiz:</b> Metaller ve tuzlu su gibi iletkenler elektriği kolayca geçirirken; plastik, tahta, cam ve kauçuk gibi yalıtkanlar elektrik akımını engeller.
-            </p>
-            <button class="btn" id="restart-btn">Yeniden Oyna 🔄</button>
+        <!-- Circuit Diagram in Modal -->
+        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 mb-6 flex flex-col items-center justify-center relative min-h-[170px]">
+            <div id="modal-bulb" class="w-14 h-14 rounded-full bg-slate-200 border-4 border-slate-400 flex items-center justify-center text-2xl text-slate-400 mb-4 transition-all duration-300">
+                <i class="fa-solid fa-lightbulb"></i>
+            </div>
+
+            <div class="w-full max-w-md flex items-center justify-between gap-1">
+                <div class="w-10 h-14 bg-gradient-to-b from-amber-400 to-amber-600 rounded border border-amber-300 flex items-center justify-center text-slate-950 font-black text-xs">
+                    + / -
+                </div>
+                
+                <div class="flex-1 h-2 bg-slate-300 relative">
+                    <div id="modal-wire-1" class="h-full bg-slate-400"></div>
+                </div>
+
+                <!-- THE GAP -->
+                <div id="modal-gap-zone" class="w-24 h-16 border-2 border-dashed border-amber-500 rounded-xl bg-white flex flex-col items-center justify-center text-center p-1 shadow-inner">
+                    <span id="modal-placed-item" class="text-xs text-amber-700 font-bold">KOPUK DEVRE</span>
+                </div>
+
+                <div class="flex-1 h-2 bg-slate-300 relative">
+                    <div id="modal-wire-2" class="h-full bg-slate-400"></div>
+                </div>
+
+                <div class="w-8 h-8 rounded bg-slate-200 border border-slate-300 flex items-center justify-center text-amber-600 text-xs">
+                    <i class="fa-solid fa-toggle-on"></i>
+                </div>
+            </div>
+
+            <div id="modal-feedback-msg" class="mt-4 text-xs font-bold text-center text-slate-600 min-h-[20px]">
+                Alet çantandan devreye bağlamak istediğin nesneyi seç!
+            </div>
+        </div>
+
+        <!-- Disappearing Inventory Grid -->
+        <div>
+            <h4 class="text-xs font-bold text-slate-700 mb-3 flex items-center justify-between">
+                <span class="flex items-center gap-2">
+                    <i class="fa-solid fa-briefcase text-amber-600"></i>
+                    <span>Kalan Alet Çantası Malzemelerin:</span>
+                </span>
+                <span class="text-[10px] text-rose-600 font-normal">*Doğru iletken kullanıldığında silinir!</span>
+            </h4>
+            <div id="modal-inventory-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <!-- Loaded dynamically -->
+            </div>
         </div>
     </div>
+</div>
 
-    <script>
-        // --- BİLGİ DİZİSİ ---
-        const ITEMS = [
-            // İletkenler
-            { id: 1, name: "Bakır Tel", type: "conductor", icon: "🧵", info: "Bakır metaller elektriği çok iyi iletir!" },
-            { id: 2, name: "Demir Çivi", type: "conductor", icon: "📌", info: "Demir çivi iletken bir metaldir." },
-            { id: 3, name: "Alüminyum Folyo", type: "conductor", icon: "📄", info: "Alüminyum elektriği hızla geçirir." },
-            { id: 4, name: "Metal Anahtar", type: "conductor", icon: "🔑", info: "Metal anahtarlar iletkendir." },
-            { id: 5, name: "Altın Yüzük", type: "conductor", icon: "💍", info: "Altın harika bir iletkendir." },
-            { id: 6, name: "Tuzlu Su", type: "conductor", icon: "🧪", info: "Tuzlu su elektrik akımını iletir!" },
-            { id: 7, name: "Ataş", type: "conductor", icon: "📎", info: "Metal ataş elektrik iletir." },
+<script>
+/* GAME STATE DATA STRUCTURE */
+let gameState = {
+    score: 0,
+    soundEnabled: true,
+    tabUnlocked: {
+        'tab-lab': true,
+        'tab-house': false,
+        'tab-crossword': false
+    },
+    p2SolvedCount: 0,
+    currentHouseRoom: 1, // Enforced order 1 -> 2 -> 3 -> 4
+    roomsFixed: [false, false, false, false],
+    currentRoomModal: null
+};
 
-            // Yalıtkanlar
-            { id: 8, name: "Plastik Şişe", type: "insulator", icon: "🍾", info: "Plastik elektriği iletmez (Yalıtkan)." },
-            { id: 9, name: "Tahta Kaşık", type: "insulator", icon: "🥄", info: "Tahta yalıtkan bir maddedir." },
-            { id: 10, name: "Cam Bardak", type: "insulator", icon: "🥛", info: "Cam elektrik akımını engeller." },
-            { id: 11, name: "Kauçuk Silgi", type: "insulator", icon: "🧽", info: "Kauçuk harika bir yalıtkandır." },
-            { id: 12, name: "Balon", type: "insulator", icon: "🎈", info: "Kuru balon yalıtkandır." },
-            { id: 13, name: "Kuru Kağıt", type: "insulator", icon: "📜", info: "Kağıt elektrik akımını iletmez." },
-            { id: 14, name: "Kumaş", type: "insulator", icon: "👕", info: "Kuru kumaşlar yalıtkandır." }
-        ];
+let p2q1CorrectFound = 0;
 
-        // --- GLOBAL ELEMANLAR VE DEĞİŞKENLER ---
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        const scoreEl = document.getElementById('score');
-        const infoToast = document.getElementById('info-toast');
-        const stageTitleEl = document.getElementById('stage-title');
-        const scoreDisplayEl = document.getElementById('score-display');
+function selectItemQ1(btnElement, isConductor) {
+    if (btnElement.disabled) return;
 
-        let width, height;
-        let score = 0;
-        let activeStage = 1;
-        let gameRunning = false;
-        let animationFrameId = null;
+    if (isConductor) {
+        playSound('success');
+        btnElement.className = "p-3 bg-emerald-600 border-2 border-emerald-400 rounded-2xl flex flex-col items-center gap-2 text-xs md:text-sm text-white font-bold shadow-lg shadow-emerald-500/30 transition transform scale-105";
+        btnElement.innerHTML += ' <span class="text-[10px] text-emerald-200"><i class="fa-solid fa-check"></i> İletken</span>';
+        btnElement.disabled = true;
 
-        // --- AŞAMA 1: ROBOT TOPLAMA OYUNU MANTIĞI ---
-        const robot = {
-            x: 0,
-            y: 0,
-            width: 100,
-            height: 90,
-            speed: 9
-        };
+        p2q1CorrectFound++;
+        updateScore(5);
 
-        let fallingItems = [];
-        let isWaveWaiting = false;
+        const feedback = document.getElementById('p2-q1-feedback');
+        feedback.className = "text-xs font-bold text-emerald-400";
+        feedback.innerText = `Harika! İletken maddeyi buldun (${p2q1CorrectFound} / 3)`;
 
-        const keys = { left: false, right: false };
+        if (p2q1CorrectFound === 3) {
+            feedback.innerText = "Tebrikler! Tüm iletken maddeleri buldun! 2. Soruya geçebilirsin.";
+            gameState.p2SolvedCount++;
+            document.getElementById('p2-counter').innerText = `${gameState.p2SolvedCount} / 3`;
+            document.getElementById('p2-progress-bar').style.width = `${(gameState.p2SolvedCount / 3) * 100}%`;
 
-        function resizeCanvas() {
-            const container = document.getElementById('game-container');
-            width = container.clientWidth;
-            height = container.clientHeight;
-            canvas.width = width;
-            canvas.height = height;
-            robot.y = height - 100;
-
-            if (trainCanvas) {
-                trainCanvas.width = width;
-                trainCanvas.height = 380;
-            }
+            const q2 = document.getElementById('p2-q2');
+            q2.classList.remove('opacity-50', 'pointer-events-none');
         }
+    } else {
+        playSound('fail');
+        btnElement.className = "p-3 bg-rose-600 border-2 border-rose-400 rounded-2xl flex flex-col items-center gap-2 text-xs md:text-sm text-white font-bold shadow-lg shadow-rose-500/30 transition";
+        btnElement.innerHTML += ' <span class="text-[10px] text-rose-200"><i class="fa-solid fa-xmark"></i> Yalıtkan</span>';
+        btnElement.disabled = true;
 
-        window.addEventListener('resize', resizeCanvas);
+        const feedback = document.getElementById('p2-q1-feedback');
+        feedback.className = "text-xs font-bold text-rose-400";
+        feedback.innerText = "Bu madde Yalıtkandır! İletken maddeleri aramaya devam et.";
+    }
+}
 
-        // Klavye Kontrolleri
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
-            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
-        });
+// Available Items Inventory (Correct conductors will get permanently deleted once used!)
+let inventoryItems = [
+    {
+        id: 'copper_key',
+        name: 'Bakır Anahtar',
+        type: 'conductor',
+        icon: 'fa-key',
+        color: 'text-amber-500'
+    },
+    {
+        id: 'plastic_ruler',
+        name: 'Plastik Cetvel',
+        type: 'insulator',
+        icon: 'fa-ruler',
+        color: 'text-blue-400'
+    },
+    {
+        id: 'iron_nail',
+        name: 'Demir Çivi',
+        type: 'conductor',
+        icon: 'fa-wrench',
+        color: 'text-slate-300'
+    },
+    {
+        id: 'eraser',
+        name: 'Kuru Silgi',
+        type: 'insulator',
+        icon: 'fa-eraser',
+        color: 'text-pink-400'
+    },
+    {
+        id: 'aluminum_foil',
+        name: 'Alüminyum Folyo',
+        type: 'conductor',
+        icon: 'fa-scroll',
+        color: 'text-slate-200'
+    },
+    {
+        id: 'pencil_lead',
+        name: 'Kurşun Kalem Ucu',
+        type: 'conductor',
+        icon: 'fa-pencil',
+        color: 'text-emerald-400'
+    },
+    {
+        id: 'wooden_spoon',
+        name: 'Tahta Kaşık',
+        type: 'insulator',
+        icon: 'fa-utensils',
+        color: 'text-amber-700'
+    },
+    {
+        id: 'glass_marble',
+        name: 'Cam Bilye',
+        type: 'insulator',
+        icon: 'fa-circle',
+        color: 'text-cyan-300'
+    }
+];
 
-        window.addEventListener('keyup', (e) => {
-            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
-            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
-        });
+/* WEB AUDIO SYNTHESIZER (No External Assets Required) */
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
 
-        // Dokunmatik Butonlar
-        const btnLeft = document.getElementById('btn-left');
-        const btnRight = document.getElementById('btn-right');
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new AudioContext();
+    }
+}
 
-        btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); keys.left = true; });
-        btnLeft.addEventListener('touchend', (e) => { e.preventDefault(); keys.left = false; });
-        btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); keys.right = true; });
-        btnRight.addEventListener('touchend', (e) => { e.preventDefault(); keys.right = false; });
-
-        function showToast(text, isGood) {
-            infoToast.innerText = text;
-            infoToast.style.borderColor = isGood ? "#34d399" : "#fb7185";
-            infoToast.style.opacity = '1';
-            infoToast.style.transform = 'translateX(-50%) translateY(0)';
-
-            setTimeout(() => {
-                infoToast.style.opacity = '0';
-                infoToast.style.transform = 'translateX(-50%) translateY(-10px)';
-            }, 2200);
+function playSound(type) {
+    if (!gameState.soundEnabled) return;
+    try {
+        initAudio();
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
         }
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
 
-        // 3'lü Dalga Halinde Nesne Üretimi (Yavaş ve Düzenli)
-        function spawn3Wave() {
-            if (fallingItems.length > 0 || isWaveWaiting || activeStage !== 1) return;
+        const now = audioCtx.currentTime;
 
-            isWaveWaiting = true;
-
-            setTimeout(() => {
-                if (activeStage !== 1 || !gameRunning) return;
-
-                const selectedIndices = [];
-                while (selectedIndices.length < 3) {
-                    const idx = Math.floor(Math.random() * ITEMS.length);
-                    if (!selectedIndices.includes(idx)) selectedIndices.push(idx);
-                }
-
-                // Ekranı 3 bölgeye ayırıp nesneleri çakışmayacak şekilde konumlandır
-                const laneWidth = width / 3;
-
-                selectedIndices.forEach((itemIdx, i) => {
-                    const itemTemplate = ITEMS[itemIdx];
-                    const minX = i * laneWidth + 20;
-                    const maxX = (i + 1) * laneWidth - 70;
-                    const itemX = Math.random() * (maxX - minX) + minX;
-
-                    fallingItems.push({
-                        ...itemTemplate,
-                        x: itemX,
-                        y: -60 - (i * 25), // Çok hafif kademeli düşüş
-                        size: 50,
-                        speed: 1.1 // Çok yavaş süzülme
-                    });
-                });
-
-                isWaveWaiting = false;
-            }, 1600); // Dalgalar arası 1.6 saniye bekleme
+        if (type === 'click') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(400, now);
+            osc.frequency.exponentialRampToValueAtTime(800, now + 0.05);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.05);
+            osc.start(now);
+            osc.stop(now + 0.05);
+        } else if (type === 'success') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(523.25, now);
+            osc.frequency.setValueAtTime(659.25, now + 0.1);
+            osc.frequency.setValueAtTime(783.99, now + 0.2);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.4);
+            osc.start(now);
+            osc.stop(now + 0.4);
+        } else if (type === 'fail') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(220, now);
+            osc.frequency.linearRampToValueAtTime(110, now + 0.2);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.25);
+            osc.start(now);
+            osc.stop(now + 0.25);
         }
+    } catch(e) {}
+}
 
-        function updateStage1() {
-            if (!gameRunning || activeStage !== 1) return;
+function toggleAudio() {
+    gameState.soundEnabled = !gameState.soundEnabled;
+    const soundIcon = document.getElementById('sound-icon');
+    soundIcon.className = gameState.soundEnabled ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark text-slate-500';
+}
 
-            // Robot Hareketi
-            if (keys.left) robot.x -= robot.speed;
-            if (keys.right) robot.x += robot.speed;
+function updateScore(points) {
+    gameState.score += points;
+    document.getElementById('user-score').innerText = gameState.score;
+}
 
-            if (robot.x < 10) robot.x = 10;
-            if (robot.x + robot.width > width - 10) robot.x = width - 10 - robot.width;
+/* NAVIGATION TABS LOGIC WITH LOCKING */
+function switchTab(tabId) {
+    if (!gameState.tabUnlocked[tabId]) {
+        playSound('fail');
+        return;
+    }
 
-            // Nesne Dalga Kontrolü
-            if (fallingItems.length === 0 && !isWaveWaiting) {
-                spawn3Wave();
-            }
+    playSound('click');
 
-            // Düşen Nesneler
-            for (let i = fallingItems.length - 1; i >= 0; i--) {
-                let item = fallingItems[i];
-                item.y += item.speed;
+    ['tab-lab', 'tab-house', 'tab-crossword'].forEach(id => {
+        const sec = document.getElementById(id);
+        const btn = document.getElementById('btn-' + id);
 
-                // Robotun Catcher Haznesi İle Çarpışma
-                const catcherY = robot.y + 10;
-                if (
-                    item.y + item.size >= catcherY &&
-                    item.y <= catcherY + 25 &&
-                    item.x + item.size >= robot.x &&
-                    item.x <= robot.x + robot.width
-                ) {
-                    if (item.type === 'conductor') {
-                        score += 1;
-                        showToast(`⚡ +1 Puan! ${item.name}: ${item.info}`, true);
-                    } else {
-                        score = Math.max(0, score - 1);
-                        showToast(`🛡️ -1 Puan! ${item.name}: ${item.info}`, false);
-                    }
-
-                    scoreEl.innerText = score;
-                    fallingItems.splice(i, 1);
-
-                    if (score >= 20) {
-                        triggerStage1Clear();
-                        return;
-                    }
-                    continue;
-                }
-
-                // Ekrandan Düşenler
-                if (item.y > height + 20) {
-                    fallingItems.splice(i, 1);
-                }
-            }
-        }
-
-        function drawRobot(x, y) {
-            ctx.save();
-            ctx.translate(x, y);
-
-            // Anten
-            ctx.strokeStyle = "#38bdf8";
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(50, 20);
-            ctx.lineTo(50, 0);
-            ctx.stroke();
-
-            // Anten Işığı
-            ctx.fillStyle = "#38bdf8";
-            ctx.beginPath();
-            ctx.arc(50, 0, 6, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Robot Kafası
-            ctx.fillStyle = "#334155";
-            ctx.strokeStyle = "#38bdf8";
-            ctx.lineWidth = 2.5;
-            ctx.beginPath();
-            ctx.roundRect(20, 20, 60, 40, 10);
-            ctx.fill();
-            ctx.stroke();
-
-            // Vizör / Gözler
-            ctx.fillStyle = "#0284c7";
-            ctx.beginPath();
-            ctx.roundRect(28, 30, 44, 18, 6);
-            ctx.fill();
-
-            ctx.fillStyle = "#38bdf8";
-            ctx.beginPath();
-            ctx.arc(40, 39, 4, 0, Math.PI * 2);
-            ctx.arc(60, 39, 4, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Gövde / Enerji Deposu
-            ctx.fillStyle = "#1e293b";
-            ctx.beginPath();
-            ctx.roundRect(15, 62, 70, 28, 8);
-            ctx.fill();
-            ctx.stroke();
-
-            // Göğüs Reaktörü
-            ctx.fillStyle = "#f59e0b";
-            ctx.beginPath();
-            ctx.arc(50, 76, 8, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Üst Toplama Haznesi (Kollardan Uzanan Ağız)
-            ctx.fillStyle = "rgba(56, 189, 248, 0.35)";
-            ctx.strokeStyle = "#38bdf8";
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.roundRect(0, 5, 100, 16, 8);
-            ctx.fill();
-            ctx.stroke();
-
-            ctx.restore();
-        }
-
-        function drawStage1() {
-            ctx.clearRect(0, 0, width, height);
-
-            // Robotu Çiz
-            drawRobot(robot.x, robot.y);
-
-            // Sadece Cisim ve İsmi Çiz (Kenarlık veya Arka Plan Yok)
-            for (let item of fallingItems) {
-                // İkon
-                ctx.font = "38px Segoe UI";
-                ctx.textAlign = "center";
-                ctx.textBaseline = "middle";
-                ctx.fillText(item.icon, item.x + item.size / 2, item.y + item.size / 2);
-
-                // İsim Etiketi
-                ctx.fillStyle = "#ffffff";
-                ctx.font = "bold 13px Segoe UI";
-                ctx.fillText(item.name, item.x + item.size / 2, item.y + item.size + 15);
-            }
-        }
-
-        function stage1Loop() {
-            if (activeStage === 1 && gameRunning) {
-                updateStage1();
-                drawStage1();
-                animationFrameId = requestAnimationFrame(stage1Loop);
-            }
-        }
-
-        function triggerStage1Clear() {
-            gameRunning = false;
-            cancelAnimationFrame(animationFrameId);
-            document.getElementById('stage1-clear-overlay').classList.remove('hidden');
-        }
-
-        // --- AŞAMA 2: HAREKETLİ TREN EŞLEŞTİRME OYUNU MANTIĞI ---
-        const trainCanvas = document.getElementById('train-canvas');
-        const trainCtx = trainCanvas ? trainCanvas.getContext('2d') : null;
-
-        let trainX = -700;
-        let trainSpeed = 0.55; // Çok sakin, rahatça tıklanabilir hız
-        let trainScore = 0;
-        let activeWagons = [];
-        let selectedWagon = null;
-
-        function initTrainStage() {
-            activeStage = 2;
-            gameRunning = true;
-            trainScore = 0;
-            trainX = -850;
-            selectedWagon = null;
-
-            stageTitleEl.innerText = "2. Aşama: Tren Eşleştirme Oyunu";
-            scoreDisplayEl.innerHTML = `⭐ Eşleşme: <span id="score">${trainScore}</span> / 10`;
-
-            document.getElementById('stage1-clear-overlay').classList.add('hidden');
-            document.getElementById('touch-controls').style.display = 'none';
-            document.getElementById('canvas').style.display = 'none';
-            document.getElementById('train-stage').style.display = 'flex';
-
-            // 10 Adet Karışık Vagon Yükü Hazırla
-            const shuffled = [...ITEMS].sort(() => Math.random() - 0.5).slice(0, 10);
-            activeWagons = shuffled.map((item, index) => ({
-                id: index,
-                item: item,
-                completed: false,
-                matchedCorrectly: null
-            }));
-
-            // İstasyon Tıklama Olayları
-            document.getElementById('station-conductor').onclick = () => handleStationMatch('conductor');
-            document.getElementById('station-insulator').onclick = () => handleStationMatch('insulator');
-
-            if (trainAnimationId) cancelAnimationFrame(trainAnimationId);
-            trainLoop();
-        }
-
-        let trainAnimationId = null;
-
-        function updateTrain() {
-            trainX += trainSpeed;
-
-            // Tren ekrandan tamamen çıkarsa başa dönsün
-            const trainTotalLength = 200 + activeWagons.length * 110;
-            if (trainX > width + 100) {
-                trainX = -trainTotalLength;
-            }
-        }
-
-        function drawTrain() {
-            if (!trainCtx) return;
-            trainCtx.clearRect(0, 0, width, 380);
-
-            // Raylar
-            trainCtx.strokeStyle = "#64748b";
-            trainCtx.lineWidth = 6;
-            trainCtx.beginPath();
-            trainCtx.moveTo(0, 260);
-            trainCtx.lineTo(width, 260);
-            trainCtx.moveTo(0, 275);
-            trainCtx.lineTo(width, 275);
-            trainCtx.stroke();
-
-            // Traversler (Ahşaplar)
-            trainCtx.strokeStyle = "#475569";
-            trainCtx.lineWidth = 4;
-            for (let rx = 0; rx < width; rx += 25) {
-                trainCtx.beginPath();
-                trainCtx.moveTo(rx, 255);
-                trainCtx.lineTo(rx, 280);
-                trainCtx.stroke();
-            }
-
-            // Lokomotif Çizimi
-            const locoX = trainX + activeWagons.length * 110;
-            
-            // Lokomotif Gövdesi
-            trainCtx.fillStyle = "#38bdf8";
-            trainCtx.beginPath();
-            trainCtx.roundRect(locoX, 170, 120, 80, 12);
-            trainCtx.fill();
-
-            // Kabin
-            trainCtx.fillStyle = "#0284c7";
-            trainCtx.beginPath();
-            trainCtx.roundRect(locoX + 60, 130, 60, 120, 8);
-            trainCtx.fill();
-
-            // Baca & Duman
-            trainCtx.fillStyle = "#475569";
-            trainCtx.fillRect(locoX + 20, 140, 20, 30);
-
-            // Lokomotif Tekerlekleri
-            trainCtx.fillStyle = "#f59e0b";
-            [locoX + 25, locoX + 65, locoX + 100].forEach(twX => {
-                trainCtx.beginPath();
-                trainCtx.arc(twX, 260, 16, 0, Math.PI * 2);
-                trainCtx.fill();
-            });
-
-            // Vagonların Çizimi
-            activeWagons.forEach((wagon, index) => {
-                const wagonX = trainX + index * 110;
-                const wagonY = 190;
-                const wagonW = 95;
-                const wagonH = 60;
-
-                // Vagon Bağlantısı
-                trainCtx.strokeStyle = "#94a3b8";
-                trainCtx.lineWidth = 4;
-                trainCtx.beginPath();
-                trainCtx.moveTo(wagonX + wagonW, wagonY + 40);
-                trainCtx.lineTo(wagonX + wagonW + 15, wagonY + 40);
-                trainCtx.stroke();
-
-                // Seçili Vagon Parıltısı
-                if (selectedWagon && selectedWagon.id === wagon.id) {
-                    trainCtx.strokeStyle = "#f59e0b";
-                    trainCtx.lineWidth = 4;
-                    trainCtx.beginPath();
-                    trainCtx.roundRect(wagonX - 4, wagonY - 4, wagonW + 8, wagonH + 8, 12);
-                    trainCtx.stroke();
-                }
-
-                // Vagon Gövdesi
-                trainCtx.fillStyle = wagon.completed ? "#334155" : "#1e293b";
-                trainCtx.strokeStyle = wagon.completed ? (wagon.matchedCorrectly ? "#34d399" : "#fb7185") : "#38bdf8";
-                trainCtx.lineWidth = 2.5;
-                trainCtx.beginPath();
-                trainCtx.roundRect(wagonX, wagonY, wagonW, wagonH, 10);
-                trainCtx.fill();
-                trainCtx.stroke();
-
-                // Tekerlekler
-                trainCtx.fillStyle = "#64748b";
-                trainCtx.beginPath();
-                trainCtx.arc(wagonX + 20, wagonY + 62, 11, 0, Math.PI * 2);
-                trainCtx.arc(wagonX + wagonW - 20, wagonY + 62, 11, 0, Math.PI * 2);
-                trainCtx.fill();
-
-                // Vagondaki Eşya
-                if (!wagon.completed) {
-                    trainCtx.font = "28px Segoe UI";
-                    trainCtx.textAlign = "center";
-                    trainCtx.fillText(wagon.item.icon, wagonX + wagonW / 2, wagonY + 32);
-
-                    trainCtx.fillStyle = "#ffffff";
-                    trainCtx.font = "bold 11px Segoe UI";
-                    trainCtx.fillText(wagon.item.name, wagonX + wagonW / 2, wagonY + 50);
-                } else {
-                    trainCtx.font = "24px Segoe UI";
-                    trainCtx.textAlign = "center";
-                    trainCtx.fillText(wagon.matchedCorrectly ? "✅" : "❌", wagonX + wagonW / 2, wagonY + 38);
-                }
-            });
-        }
-
-        // Tren Canvas Tıklama Tespiti
-        trainCanvas.addEventListener('click', (e) => {
-            if (activeStage !== 2) return;
-
-            const rect = trainCanvas.getBoundingClientRect();
-            const clickX = e.clientX - rect.left;
-            const clickY = e.clientY - rect.top;
-
-            activeWagons.forEach((wagon, index) => {
-                if (wagon.completed) return;
-
-                const wagonX = trainX + index * 110;
-                const wagonY = 190;
-
-                if (
-                    clickX >= wagonX && clickX <= wagonX + 95 &&
-                    clickY >= wagonY && clickY <= wagonY + 60
-                ) {
-                    selectedWagon = wagon;
-                    showToast(`Seçildi: ${wagon.item.name}. Şimdi istasyona tıkla!`, true);
-                }
-            });
-        });
-
-        function handleStationMatch(targetType) {
-            if (!selectedWagon) {
-                showToast("Lütfen önce trenden bir vagon seçin!", false);
-                return;
-            }
-
-            if (selectedWagon.item.type === targetType) {
-                selectedWagon.completed = true;
-                selectedWagon.matchedCorrectly = true;
-                trainScore += 1;
-                showToast(`Doğru! ${selectedWagon.item.name} -> ${selectedWagon.item.info}`, true);
+        if (id === tabId) {
+            sec.classList.remove('hidden');
+            btn.className = 'px-3 py-1.5 md:px-3.5 md:py-2 rounded-xl font-heading text-xs md:text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow';
+        } else {
+            sec.classList.add('hidden');
+            if (gameState.tabUnlocked[id]) {
+                btn.className = 'px-3 py-1.5 md:px-3.5 md:py-2 rounded-xl font-heading text-xs md:text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50';
             } else {
-                showToast(`Yanlış! ${selectedWagon.item.name} ${targetType === 'conductor' ? 'yalıtkandır' : 'iletkendir'}.`, false);
-            }
-
-            selectedWagon = null;
-            document.getElementById('score').innerText = trainScore;
-
-            // Tümü Tamamlandı mı?
-            const allDone = activeWagons.every(w => w.completed);
-            if (allDone || trainScore >= 10) {
-                setTimeout(triggerStage2Clear, 1000);
+                btn.className = 'px-3 py-1.5 md:px-3.5 md:py-2 rounded-xl font-heading text-xs md:text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 text-slate-500 bg-slate-900/50 cursor-not-allowed opacity-60';
             }
         }
+    });
+}
 
-        function trainLoop() {
-            if (activeStage === 2 && gameRunning) {
-                updateTrain();
-                drawTrain();
-                trainAnimationId = requestAnimationFrame(trainLoop);
-            }
+function unlockAndSwitchTab(tabId) {
+    gameState.tabUnlocked[tabId] = true;
+
+    // Update Tab UI Lock Icons
+    if (tabId === 'tab-house') {
+        const btn = document.getElementById('btn-tab-house');
+        btn.disabled = false;
+        btn.classList.remove('cursor-not-allowed', 'opacity-60', 'text-slate-500');
+        document.getElementById('lock-icon-house').className = 'fa-solid fa-check text-amber-400';
+    } else if (tabId === 'tab-crossword') {
+        const btn = document.getElementById('btn-tab-crossword');
+        btn.disabled = false;
+        btn.classList.remove('cursor-not-allowed', 'opacity-60', 'text-slate-500');
+        document.getElementById('lock-icon-crossword').className = 'fa-solid fa-check text-purple-400';
+    }
+
+    switchTab(tabId);
+}
+
+/* SECTION 1: LAB QUIZ LOGIC (3 Questions) */
+function answerLabQ(qNum, isCorrect, btnElement) {
+    const parent = btnElement.parentElement;
+    const buttons = parent.querySelectorAll('button');
+
+    if (isCorrect) {
+        playSound('success');
+        btnElement.className = "p-3 bg-emerald-600 text-white font-bold border border-emerald-400 rounded-2xl text-xs md:text-sm text-left shadow-lg";
+        btnElement.innerHTML += ' <i class="fa-solid fa-circle-check text-emerald-200 ml-2"></i> (Doğru!)';
+        buttons.forEach(b => b.onclick = null);
+
+        gameState.p2SolvedCount++;
+        updateScore(10);
+
+        document.getElementById('p2-counter').innerText = `${gameState.p2SolvedCount} / 3`;
+        document.getElementById('p2-progress-bar').style.width = `${(gameState.p2SolvedCount / 3) * 100}%`;
+
+        if (qNum === 1) {
+            const q2 = document.getElementById('p2-q2');
+            q2.classList.remove('opacity-50', 'pointer-events-none');
+        } else if (qNum === 2) {
+            const q3 = document.getElementById('p2-q3');
+            q3.classList.remove('opacity-50', 'pointer-events-none');
+        } else if (qNum === 3) {
+            document.getElementById('p2-status').innerText = 'Tüm Sorular Tamamlandı! 🎉';
+            document.getElementById('p2-status').className = 'text-emerald-400 font-bold';
+            document.getElementById('p2-next-btn-container').classList.remove('hidden');
+        }
+    } else {
+        playSound('fail');
+        btnElement.className = "p-3 bg-rose-600 text-white border border-rose-400 rounded-2xl text-xs md:text-sm text-left shadow-lg";
+        btnElement.innerHTML += ' <i class="fa-solid fa-circle-xmark text-rose-200 ml-2"></i> (Yanlış, tekrar dene!)';
+    }
+}
+
+/* SECTION 2: DARK HOUSE SEQUENTIAL REPAIR & DISAPPEARING INVENTORY */
+function openRoomRepairModal(roomId) {
+    // Force sequential room repair (Must start with room 1, then 2, etc.)
+    if (roomId !== gameState.currentHouseRoom) {
+        playSound('fail');
+        return;
+    }
+
+    playSound('click');
+    gameState.currentRoomModal = roomId;
+
+    const modal = document.getElementById('repair-modal');
+    modal.classList.remove('hidden');
+
+    const roomNames = ["1. Salon", "2. Mutfak", "3. Çalışma Odası", "4. Yatak Odası"];
+    document.getElementById('modal-room-title').innerText = `${roomNames[roomId - 1]} Devresini Tamamla`;
+
+    // Reset Modal Circuit Graphics
+    document.getElementById('modal-bulb').className = "w-14 h-14 rounded-full bg-slate-800 border-4 border-slate-600 flex items-center justify-center text-2xl text-slate-500 mb-4";
+    document.getElementById('modal-wire-1').className = "h-full bg-slate-700";
+    document.getElementById('modal-wire-2').className = "h-full bg-slate-700";
+    document.getElementById('modal-placed-item').innerText = "KOPUK DEVRE";
+    document.getElementById('modal-placed-item').className = "text-xs text-amber-400 font-bold";
+    document.getElementById('modal-feedback-msg').innerText = "Alet çantandan devreye koymak istediğin nesneyi seç!";
+    document.getElementById('modal-feedback-msg').className = "mt-4 text-xs font-bold text-center text-slate-400";
+
+    renderInventoryGrid();
+}
+
+function closeRepairModal() {
+    playSound('click');
+    document.getElementById('repair-modal').classList.add('hidden');
+    gameState.currentRoomModal = null;
+}
+
+function renderInventoryGrid() {
+    const grid = document.getElementById('modal-inventory-grid');
+    grid.innerHTML = '';
+
+    inventoryItems.forEach(item => {
+        const btn = document.createElement('button');
+        btn.className = 'bg-slate-800 hover:bg-slate-750 border border-slate-700 p-3 rounded-2xl flex flex-col items-center text-center transition group hover:border-amber-400';
+        btn.onclick = () => tryFixRoomCircuit(item);
+
+        btn.innerHTML = `
+            <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-lg ${item.color} mb-1 group-hover:scale-110 transition">
+                <i class="fa-solid ${item.icon}"></i>
+            </div>
+            <span class="text-xs font-bold text-slate-200">${item.name}</span>
+        `;
+        grid.appendChild(btn);
+    });
+}
+
+function tryFixRoomCircuit(item) {
+    const roomId = gameState.currentRoomModal;
+    if (!roomId) return;
+
+    const modalBulb = document.getElementById('modal-bulb');
+    const modalWire1 = document.getElementById('modal-wire-1');
+    const modalWire2 = document.getElementById('modal-wire-2');
+    const placedItemTxt = document.getElementById('modal-placed-item');
+    const feedbackMsg = document.getElementById('modal-feedback-msg');
+
+    placedItemTxt.innerText = item.name;
+
+    if (item.type === 'conductor') {
+        playSound('success');
+        modalWire1.className = "h-full bg-amber-400 wire-active";
+        modalWire2.className = "h-full bg-amber-400 wire-active";
+        modalBulb.className = "w-14 h-14 rounded-full bg-yellow-400 border-4 border-amber-300 flex items-center justify-center text-2xl text-slate-950 glow-bulb mb-4";
+
+        placedItemTxt.className = "text-xs text-emerald-400 font-bold";
+        feedbackMsg.className = "mt-4 text-xs font-bold text-center text-emerald-300 bg-emerald-950/80 p-2 rounded-xl border border-emerald-500/40";
+        feedbackMsg.innerText = `TEBRİKLER! ${item.name} İLETKENDİR. Devre tamamlandı ve oda aydınlandı! (+20 Puan)`;
+
+        // REMOVE / DELETE USED CORRECT CONDUCTOR FROM INVENTORY permanently!
+        inventoryItems = inventoryItems.filter(i => i.id !== item.id);
+
+        // Mark Room as Fixed and Unlock Next Room
+        if (!gameState.roomsFixed[roomId - 1]) {
+            gameState.roomsFixed[roomId - 1] = true;
+            updateScore(20);
+            updateRoomUI(roomId);
         }
 
-        function triggerStage2Clear() {
-            gameRunning = false;
-            if (trainAnimationId) cancelAnimationFrame(trainAnimationId);
-            document.getElementById('stage2-clear-overlay').classList.remove('hidden');
-        }
+        setTimeout(() => {
+            closeRepairModal();
+        }, 2000);
 
-        // --- AŞAMA 3: DEVRE TAMAMLAMA OYUNU MANTIĞI ---
-        function initCircuitStage() {
-            activeStage = 3;
-            stageTitleEl.innerText = "3. Aşama: Devre Tamamlama";
-            scoreDisplayEl.innerHTML = "⚡ Devre Modu";
+    } else {
+        playSound('fail');
+        modalWire1.className = "h-full bg-slate-700";
+        modalWire2.className = "h-full bg-slate-700";
+        modalBulb.className = "w-14 h-14 rounded-full bg-slate-800 border-4 border-slate-600 flex items-center justify-center text-2xl text-slate-600 mb-4";
 
-            document.getElementById('stage2-clear-overlay').classList.add('hidden');
-            document.getElementById('train-stage').style.display = 'none';
-            document.getElementById('circuit-stage').style.display = 'flex';
+        placedItemTxt.className = "text-xs text-rose-400 font-bold";
+        feedbackMsg.className = "mt-4 text-xs font-bold text-center text-rose-300 bg-rose-950/80 p-2 rounded-xl border border-rose-500/40";
+        feedbackMsg.innerText = `YALITKAN ENGELİ! ${item.name} YALITKAN maddedir. Akımı geçirmez. İletken bir nesne seç!`;
+    }
+}
 
-            const inventoryEl = document.getElementById('inventory');
-            inventoryEl.innerHTML = '';
+function updateRoomUI(roomId) {
+    const card = document.getElementById(`room-card-${roomId}`);
+    if (!card) return;
 
-            // Seçenekler (2 İletken, 2 Yalıtkan)
-            const sampleItems = [
-                ITEMS.find(i => i.name === "Bakır Tel"),
-                ITEMS.find(i => i.name === "Tahta Kaşık"),
-                ITEMS.find(i => i.name === "Metal Anahtar"),
-                ITEMS.find(i => i.name === "Plastik Şişe")
-            ].sort(() => Math.random() - 0.5);
+    card.className = "room-card bg-white border-2 border-emerald-400 rounded-3xl p-5 shadow-xl transition-all duration-300 relative bg-gradient-to-br from-white via-amber-50 to-white";
 
-            sampleItems.forEach((item) => {
-                const itemDiv = document.createElement('div');
-                itemDiv.className = 'inventory-item';
-                itemDiv.setAttribute('draggable', 'true');
+    document.getElementById(`room-badge-${roomId}`).className = "px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300";
+    document.getElementById(`room-badge-${roomId}`).innerText = "Aydınlık 💡";
 
-                itemDiv.innerHTML = `
-                    <div class="icon">${item.icon}</div>
-                    <div class="label">${item.name}</div>
-                `;
+    document.getElementById(`room-status-${roomId}`).innerText = "Devre Tamamlandı!";
+    document.getElementById(`room-status-${roomId}`).className = "text-[11px] text-emerald-700 font-bold";
 
-                itemDiv.addEventListener('click', () => handleCircuitPlacement(item));
+    document.getElementById(`room-bulb-${roomId}`).className = "w-10 h-10 rounded-full bg-yellow-400 text-slate-950 flex items-center justify-center text-xl glow-bulb";
+    document.getElementById(`room-bulb-txt-${roomId}`).innerText = "Işıl Işıl Yanıyor";
+    document.getElementById(`room-bulb-txt-${roomId}`).className = "text-amber-700 font-bold";
 
-                itemDiv.addEventListener('dragstart', (e) => {
-                    e.dataTransfer.setData('text/plain', JSON.stringify(item));
-                });
+    document.getElementById(`room-btn-${roomId}`).className = "px-4 py-2 rounded-xl bg-emerald-600 text-white font-heading font-bold text-xs flex items-center gap-2";
+    document.getElementById(`room-btn-${roomId}`).innerHTML = '<i class="fa-solid fa-check"></i> Tamamlandı';
 
-                inventoryEl.appendChild(itemDiv);
-            });
+    // Unlock Next Sequential Room
+    if (roomId < 4) {
+        gameState.currentHouseRoom = roomId + 1;
+        const nextId = roomId + 1;
+        const nextCard = document.getElementById(`room-card-${nextId}`);
+        nextCard.classList.remove('opacity-50');
+        nextCard.className = "room-card bg-white border-2 border-amber-400 rounded-3xl p-5 shadow-lg transition-all duration-300 relative";
 
-            const dropZone = document.getElementById('drop-zone');
-            dropZone.innerHTML = '<span style="font-size: 11px; color: #cbd5e1; text-align: center;">Maddeyi Buraya Bırak</span>';
+        document.getElementById(`room-status-${nextId}`).innerText = "Şu anki aktif görev!";
+        document.getElementById(`room-status-${nextId}`).className = "text-[11px] text-amber-600 font-bold";
 
-            dropZone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                dropZone.classList.add('hover');
-            });
+        document.getElementById(`room-badge-${nextId}`).className = "px-3 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300";
+        document.getElementById(`room-badge-${nextId}`).innerText = `${nextId}. Onarılacak Oda`;
 
-            dropZone.addEventListener('dragleave', () => {
-                dropZone.classList.remove('hover');
-            });
+        const nextBtn = document.getElementById(`room-btn-${nextId}`);
+        nextBtn.disabled = false;
+        nextBtn.className = "px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-heading font-bold text-xs transition flex items-center gap-2 shadow";
+        nextBtn.innerHTML = `<i class="fa-solid fa-wrench"></i> <span>${nextId}. Devreyi Onar</span>`;
+    }
 
-            dropZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('hover');
-                const itemData = JSON.parse(e.dataTransfer.getData('text/plain'));
-                handleCircuitPlacement(itemData);
-            });
-        }
+    const countFixed = gameState.roomsFixed.filter(r => r === true).length;
+    document.getElementById('fixed-rooms-count').innerText = `${countFixed} / 4`;
 
-        function handleCircuitPlacement(item) {
-            const dropZone = document.getElementById('drop-zone');
-            dropZone.innerHTML = `<span style="font-size: 26px;">${item.icon}</span><span style="font-size: 11px; color:#fff; font-weight:bold;">${item.name}</span>`;
+    if (countFixed === 4) {
+        document.getElementById('p3-next-btn-container').classList.remove('hidden');
+    }
+}
 
-            const bulbGlass = document.getElementById('bulb-glass');
-            const bulbGlow = document.getElementById('bulb-glow');
+/* SECTION 3: CROSSWORD PUZZLE LOGIC */
+function checkCrossword() {
+    const answers = {
+        1: "İLETKEN",
+        2: "YALITKAN",
+        3: "AMPUL",
+        4: "PİL"
+    };
 
-            if (item.type === 'conductor') {
-                bulbGlass.setAttribute('fill', '#f59e0b');
-                bulbGlow.setAttribute('opacity', '1');
-                dropZone.style.borderColor = '#34d399';
+    let allCorrect = true;
 
-                setTimeout(() => {
-                    document.getElementById('victory-overlay').classList.remove('hidden');
-                }, 1200);
-            } else {
-                bulbGlass.setAttribute('fill', 'rgba(255, 255, 255, 0.15)');
-                bulbGlow.setAttribute('opacity', '0');
-                dropZone.style.borderColor = '#fb7185';
-                showToast(`⚠️ ${item.name} yalıtkandır! Ampul yanmadı.`, false);
-            }
-        }
+    for (let id = 1; id <= 4; id++) {
+        const container = document.getElementById(`cw-word-${id}`);
+        const inputs = container.querySelectorAll('input');
+        let userWord = "";
 
-        // --- BUTON BİLİŞİMİ ---
-        document.getElementById('start-btn').addEventListener('click', () => {
-            score = 0;
-            scoreEl.innerText = score;
-            fallingItems = [];
-            activeStage = 1;
-            gameRunning = true;
-            document.getElementById('start-overlay').classList.add('hidden');
-            resizeCanvas();
-            stage1Loop();
+        inputs.forEach(inp => {
+            userWord += (inp.value || "").toUpperCase().trim();
         });
 
-        document.getElementById('to-stage2-btn').addEventListener('click', initTrainStage);
-        document.getElementById('to-stage3-btn').addEventListener('click', initCircuitStage);
+        if (userWord === answers[id]) {
+            inputs.forEach(inp => {
+                inp.classList.remove('border-slate-700', 'border-rose-500');
+                inp.classList.add('border-emerald-400', 'bg-emerald-950/80', 'text-emerald-300');
+            });
+        } else {
+            allCorrect = false;
+            inputs.forEach(inp => {
+                inp.classList.remove('border-slate-700', 'border-emerald-400');
+                inp.classList.add('border-rose-500', 'bg-rose-950/80', 'text-rose-300');
+            });
+        }
+    }
 
-        document.getElementById('restart-btn').addEventListener('click', () => {
-            location.reload();
+    if (allCorrect) {
+        playSound('success');
+        updateScore(50);
+        showGrandVictoryModal();
+    } else {
+        playSound('fail');
+        alertModalMessage("Kırmızıyla işaretlenen kelimelerde eksik veya yanlış harf var! Lütfen kontrol et.");
+    }
+}
+
+function setupCrosswordInputs() {
+    const inputs = document.querySelectorAll('.crossword-input');
+    inputs.forEach((input) => {
+        // Auto advance next input
+        input.addEventListener('input', (e) => {
+            const val = input.value;
+            if (val.length >= 1) {
+                input.value = val.slice(-1).toLocaleUpperCase('tr-TR');
+                const next = input.nextElementSibling;
+                if (next && next.classList.contains('crossword-input')) {
+                    next.focus();
+                    next.select();
+                }
+            }
         });
 
-        // Başlangıç Ayarı
-        resizeCanvas();
-    </script>
+        // Backspace and Arrow keys navigation
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace') {
+                if (input.value === '') {
+                    const prev = input.previousElementSibling;
+                    if (prev && prev.classList.contains('crossword-input')) {
+                        prev.focus();
+                        prev.value = '';
+                    }
+                }
+            } else if (e.key === 'ArrowRight') {
+                const next = input.nextElementSibling;
+                if (next && next.classList.contains('crossword-input')) {
+                    next.focus();
+                }
+            } else if (e.key === 'ArrowLeft') {
+                const prev = input.previousElementSibling;
+                if (prev && prev.classList.contains('crossword-input')) {
+                    prev.focus();
+                }
+            }
+        });
+
+        // Paste support
+        input.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const pasteData = (e.clipboardData || window.clipboardData).getData('text').trim().toLocaleUpperCase('tr-TR');
+            const parent = input.parentElement;
+            const containerInputs = Array.from(parent.querySelectorAll('.crossword-input'));
+            const startIndex = containerInputs.indexOf(input);
+
+            for (let i = 0; i < pasteData.length && (startIndex + i) < containerInputs.length; i++) {
+                containerInputs[startIndex + i].value = pasteData[i];
+            }
+            const targetIndex = Math.min(startIndex + pasteData.length, containerInputs.length - 1);
+            containerInputs[targetIndex].focus();
+        });
+
+        input.addEventListener('focus', () => {
+            input.select();
+        });
+    });
+}
+
+// Prompt word entry modal
+function promptWordInput(wordId) {
+    playSound('click');
+    const container = document.getElementById(`cw-word-${wordId}`);
+    if (!container) return;
+    const inputs = container.querySelectorAll('.crossword-input');
+    const maxLen = inputs.length;
+
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4 backdrop-blur-md';
+    modal.innerHTML = `
+        <div class="bg-white border-2 border-purple-400 p-6 rounded-3xl max-w-sm w-full text-center shadow-2xl space-y-4">
+            <h3 class="font-heading font-bold text-lg text-amber-700 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-pen-to-square"></i>
+                <span>${wordId}. Kelimeyi Yaz (${maxLen} Harfli)</span>
+            </h3>
+            <p class="text-xs text-slate-600">Tüm kelimeyi yazıp "Doldur" butonuna tıklayın veya Enter'a basın:</p>
+            <input type="text" id="direct-word-entry" maxlength="${maxLen}" placeholder="${maxLen} harfli kelime..." class="w-full px-4 py-3 bg-slate-50 border-2 border-purple-300 rounded-xl text-center font-heading font-black text-xl text-slate-800 uppercase focus:outline-none focus:border-amber-400" />
+            <div class="flex gap-2 justify-center pt-2">
+                <button id="direct-word-cancel" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-xl text-slate-700 font-bold text-xs">İptal</button>
+                <button id="direct-word-submit" class="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-heading font-bold rounded-xl text-xs shadow">Doldur</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    const inputField = modal.querySelector('#direct-word-entry');
+    inputField.focus();
+
+    const submitFn = () => {
+        const val = inputField.value.trim().toLocaleUpperCase('tr-TR');
+        for (let i = 0; i < maxLen; i++) {
+            inputs[i].value = val[i] || '';
+        }
+        playSound('success');
+        modal.remove();
+    };
+
+    modal.querySelector('#direct-word-submit').onclick = submitFn;
+    modal.querySelector('#direct-word-cancel').onclick = () => modal.remove();
+    inputField.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') submitFn();
+    });
+}
+
+function alertModalMessage(msg) {
+    const box = document.createElement('div');
+    box.className = 'fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4 backdrop-blur-md';
+    box.innerHTML = `
+        <div class="bg-white border-2 border-rose-500 p-6 rounded-3xl max-w-sm w-full text-center shadow-2xl">
+            <i class="fa-solid fa-circle-exclamation text-rose-500 text-4xl mb-3"></i>
+            <p class="text-slate-800 text-sm font-bold mb-4">${msg}</p>
+            <button onclick="this.parentElement.parentElement.remove()" class="px-5 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-heading font-bold text-xs">Tamam</button>
+        </div>
+    `;
+    document.body.appendChild(box);
+}
+
+function showGrandVictoryModal() {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 z-50 bg-slate-900/70 flex items-center justify-center p-4 backdrop-blur-md';
+    modal.innerHTML = `
+        <div class="bg-white border-4 border-amber-400 p-8 rounded-3xl max-w-md w-full text-center shadow-2xl relative overflow-hidden">
+            <div class="w-24 h-24 rounded-full bg-amber-400 text-slate-950 text-5xl flex items-center justify-center mx-auto mb-4 glow-bulb">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+            <h2 class="font-heading text-3xl font-bold text-amber-600 mb-2">ŞAMPİYON ELEKTRİK UZMANI!</h2>
+            <p class="text-slate-600 text-sm mb-4">
+                Tüm bölümleri ve çengel bulmacayı başarıyla tamamladın. 4. Sınıf IPT Elektrik konusunun süper kahramanı sensin!
+            </p>
+            <div class="bg-amber-100 border border-amber-300 p-3 rounded-2xl mb-6 text-amber-900 font-heading font-bold text-xl">
+                Toplam Puanın: <span class="text-amber-600">${gameState.score}</span>
+            </div>
+            <button onclick="window.location.reload()" class="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-300 hover:from-amber-300 hover:to-yellow-200 text-slate-950 font-heading font-black text-base shadow-lg shadow-amber-500/30 w-full transition">
+                Oyunu Yeniden Başlat <i class="fa-solid fa-rotate-right ml-2"></i>
+            </button>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+// Initial setup on load
+document.addEventListener('DOMContentLoaded', () => {
+    setupCrosswordInputs();
+});
+</script>
+
 </body>
 </html>
